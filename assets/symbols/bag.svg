@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="b" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8d6e63"/>
+      <stop offset="100%" stop-color="#4e342e"/>
+    </linearGradient>
+  </defs>
+  <path d="M20 22 Q32 10 44 22 L48 52 Q32 58 16 52 Z" fill="url(#b)" stroke="#2d1a12" stroke-width="2"/>
+  <ellipse cx="32" cy="22" rx="12" ry="6" fill="#a1887f" stroke="#2d1a12" stroke-width="1.5"/>
+  <text x="32" y="42" text-anchor="middle" font-size="7" font-weight="700" fill="#ffd54f">BAG</text>
+</svg>

@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#5a0f14">
+<title>Fortune Tiger Simulator</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="tiger-icon">🐯</span>
+      <span class="brand-text">Fortune Tiger Simulator</span>
+    </div>
+    <div class="top-actions">
+      <button id="soundToggle" class="icon-btn" aria-label="Som">🔊</button>
+      <button id="settingsToggle" class="icon-btn" aria-label="Configurações">⚙️</button>
+    </div>
+  </header>
+
+  <nav class="main-nav">
+    <button class="nav-btn active" data-view="game">Jogo</button>
+    <button class="nav-btn" data-view="lab">Laboratório</button>
+    <button class="nav-btn" data-view="stats">Estatísticas</button>
+    <button class="nav-btn" data-view="history">Histórico</button>
+    <button class="nav-btn" data-view="settings">Config</button>
+  </nav>
+
+  <main class="layout">
+    <section class="view view-game">
+    <section class="game-panel view view-game">
+      <div class="game-head">
+        <div class="tiger-banner">
+          <div class="tiger-char">🐯</div>
+          <div class="banner-text">
+            <div class="banner-title">FORTUNE TIGER</div>
+            <div class="banner-sub">Simulador offline • educacional</div>
+          </div>
+          <div class="multiplier-badge" id="multiplierBadge">×10</div>
+        </div>
+        <div class="game-messages">
+          <div class="feature-text" id="featureText" hidden>FORTUNE TIGER!</div>
+          <div class="feature-sub" id="featureChosen" hidden></div>
+          <div class="lines-info" id="linesInfo"></div>
+        </div>
+      </div>
+
+      <div class="reels-wrap">
+        <div class="effects-layer" id="effectsLayer" aria-hidden="true"></div>
+        <div class="reels" id="reels">
+          <div class="reel" data-reel="0"></div>
+          <div class="reel" data-reel="1"></div>
+          <div class="reel" data-reel="2"></div>
+        </div>
+        <div class="feature-overlay" id="featureOverlay" hidden aria-hidden="true"></div>
+        <div class="multiplier-popup" id="multiplierPopup" hidden>×10</div>
+      </div>
+    </section>
+
+    <section class="info-panel view view-game">
+      <div class="stat-row">
+        <div class="stat">
+          <div class="stat-label">Saldo</div>
+          <div class="stat-value" id="balanceValue">R$ 0,00</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Aposta</div>
+          <div class="stat-value" id="betValue">R$ 0,00</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Prêmio</div>
+          <div class="stat-value win-value" id="winValue">R$ 0,00</div>
+        </div>
+      </div>
+
+      <div class="result-banner is-even" id="resultBanner" role="status" aria-live="polite">
+        <div class="result-title">Resultado operacional acumulado</div>
+        <div class="result-line">
+          <span class="result-label" id="resultLabel">EMPATE</span>
+          <span class="result-value" id="resultValue">R$ 0,00</span>
+        </div>
+      </div>
+
+      <div class="wallet-actions">
+        <button id="addFundsBtn" class="btn-secondary">ADICIONAR SALDO</button>
+        <button id="zeroBalanceBtn" class="btn-secondary">ZERAR SALDO</button>
+      </div>
+
+      <div class="bet-controls">
+        <button id="betDown" class="btn-secondary">−</button>
+        <input id="betInput" type="number" min="0.01" step="0.01" value="1.00">
+        <button id="betUp" class="btn-secondary">+</button>
+      </div>
+
+      <button id="spinBtn" class="spin-btn">GIRAR</button>
+      <button id="autoBtn" class="spin-btn auto-btn">AUTO APOSTAR</button>
+
+      <div class="profile-row">
+        <label for="profileSelect">Perfil:</label>
+        <select id="profileSelect">
+          <option value="experimental">Experimental</option>
+          <option value="reference">Referência</option>
+        </select>
+      </div>
+
+      <div id="addFundsPanel" class="panel hidden">
+        <h4>Adicionar créditos (fictícios)</h4>
+        <div class="fund-options">
+          <button data-amt="10">R$ 10,00</button>
+          <button data-amt="25">R$ 25,00</button>
+          <button data-amt="50">R$ 50,00</button>
+          <button data-amt="100">R$ 100,00</button>
+        </div>
+        <label>Valor personalizado: <input id="fundCustom" type="number" min="0.01" step="0.01" value="10.00"></label>
+        <button id="fundConfirm" class="btn-secondary">Confirmar</button>
+        <button id="fundCancel" class="btn-small">Fechar</button>
+      </div>
+
+      <div id="autoPanel" class="panel hidden">
+        <h4>Auto apostar</h4>
+        <label>Giros: <input id="autoSpins" type="number" value="100" min="1"></label>
+        <label>Aposta: <input id="autoBet" type="number" value="1.00" min="0.01" step="0.01"></label>
+        <label>Stop profit: <input id="autoStopProfit" type="number" value="" placeholder="sem limite"></label>
+        <label>Stop loss: <input id="autoStopLoss" type="number" value="" placeholder="sem limite"></label>
+        <label>Intervalo:
+          <select id="autoInterval">
+            <option value="500">Rápido (500 ms)</option>
+            <option value="1000" selected>Normal (1.000 ms)</option>
+            <option value="2000">Lento (2.000 ms)</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </label>
+        <input id="autoIntervalCustom" type="number" value="1000" min="100" hidden>
+        <div class="lab-btns">
+          <button id="autoStart" class="btn-secondary">Iniciar</button>
+          <button id="autoPause" class="btn-secondary">Pausar</button>
+          <button id="autoStop" class="btn-secondary">Parar</button>
+        </div>
+        <div id="autoStatus" class="status-line">Parado.</div>
+      </div>
+
+      <div class="status-line" id="statusLine">Pronto.</div>
+    </section>
+
+    <section class="history-panel view view-history">
+      <div class="panel-header">
+        <h3>Histórico</h3>
+        <button id="clearHistory" class="btn-small">Limpar</button>
+      </div>
+      <ul id="historyList" class="history-list"></ul>
+    </section>
+
+    <section class="settings-panel view view-settings" id="settingsPanel" hidden>
+      <h3>Configurações</h3>
+      <label><input type="checkbox" id="soundCheckbox" checked> Sons</label>
+      <label><input type="checkbox" id="animationsCheckbox" checked> Animações</label>
+      <button id="resetBalance" class="btn-secondary">Reiniciar saldo (10.000)</button>
+      <button id="exportJson" class="btn-secondary">Exportar histórico (JSON)</button>
+      <button id="closeSettings" class="btn-small">Fechar</button>
+    </section>
+  </main>
+
+  <section class="view view-lab" id="viewLab" hidden>
+    <div class="lab-panel">
+      <h2>Laboratório Estatístico</h2>
+      <div class="lab-controls">
+        <label>Rodadas:
+          <select id="labSpins">
+            <option value="1000">1.000</option>
+            <option value="10000">10.000</option>
+            <option value="100000" selected>100.000</option>
+            <option value="1000000">1.000.000</option>
+            <option value="5000000">5.000.000</option>
+            <option value="10000000">10.000.000</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </label>
+        <input id="labCustomSpins" type="number" placeholder="quantidade" hidden>
+        <label>Aposta: <input id="labBet" type="number" value="10" min="1"></label>
+        <label>Saldo inicial: <input id="labBalance" type="number" value="10000"></label>
+        <label>Perfil:
+          <select id="labProfile">
+            <option value="experimental">Experimental</option>
+            <option value="reference">Referência</option>
+          </select>
+        </label>
+        <label>Semente: <input id="labSeed" type="number" value="42"></label>
+        <label>Experimentos: <input id="labExperiments" type="number" value="1" min="1" max="20"></label>
+        <div class="lab-btns">
+          <button id="labRun" class="spin-btn">Executar</button>
+          <button id="labCancel" class="btn-secondary">Cancelar</button>
+        </div>
+        <progress id="labProgress" value="0" max="100" style="width:100%"></progress>
+        <div id="labStatus" class="status-line">Pronto.</div>
+      </div>
+
+      <div class="lab-indicators" id="labIndicators"></div>
+
+      <div class="lab-charts">
+        <canvas id="chartBalance" width="320" height="180"></canvas>
+        <canvas id="chartRtp" width="320" height="180"></canvas>
+        <canvas id="chartHist" width="320" height="180"></canvas>
+        <canvas id="chartFreq" width="320" height="180"></canvas>
+      </div>
+
+      <div class="lab-section">
+        <h3>Análise de risco (sessões)</h3>
+        <div class="lab-controls">
+          <label>Sessões: <input id="riskSessions" type="number" value="1000" min="1"></label>
+          <label>Rodadas/sessão: <input id="riskRounds" type="number" value="100" min="1"></label>
+          <label>Stop profit: <input id="riskStopProfit" type="number" value="" placeholder="sem limite"></label>
+          <label>Stop loss: <input id="riskStopLoss" type="number" value="" placeholder="sem limite"></label>
+          <label>Estratégia:
+            <select id="riskStrategy">
+              <option value="fixed">Aposta fixa</option>
+              <option value="martingale">Martingale</option>
+              <option value="progressive">Progressiva</option>
+              <option value="decrease-after-win">Diminuir após ganhar</option>
+              <option value="percent-balance">% do saldo</option>
+            </select>
+          </label>
+          <button id="riskRun" class="btn-secondary">Executar análise de risco</button>
+        </div>
+        <div id="riskResults" class="lab-indicators"></div>
+      </div>
+
+      <div class="lab-section">
+        <h3>Comparação de estratégias</h3>
+        <button id="stratRun" class="btn-secondary">Comparar estratégias</button>
+        <div id="stratResults" class="lab-indicators"></div>
+      </div>
+
+      <div class="lab-section">
+        <h3>Experimentos comparativos (pesos)</h3>
+        <button id="expRun" class="btn-secondary">Executar comparação de pesos</button>
+        <div id="expResults" class="lab-indicators"></div>
+      </div>
+
+      <div class="lab-btns">
+        <button id="labExportCsv" class="btn-secondary">Exportar CSV</button>
+        <button id="labExportJson" class="btn-secondary">Exportar JSON</button>
+        <button id="labSave" class="btn-secondary">Salvar experimento</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="view view-stats" id="viewStats" hidden>
+    <div class="lab-panel">
+      <h2>Estatísticas da Carteira</h2>
+      <div id="statsIndicators" class="lab-indicators"></div>
+      <div class="lab-charts">
+        <canvas id="chartWalletBalance" width="320" height="180"></canvas>
+        <canvas id="chartWalletPnl" width="320" height="180"></canvas>
+      </div>
+      <div class="lab-btns">
+        <button id="statsRefresh" class="btn-secondary">Atualizar</button>
+        <button id="statsExport" class="btn-secondary">Exportar JSON</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    Simulador educacional. RTP não garante retorno individual. Parâmetros experimentais.
+  </footer>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

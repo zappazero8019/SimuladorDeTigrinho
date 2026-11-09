@@ -1,0 +1,9 @@
+/* Estilos específicos do jogo (complemento) */
+.win-value { color: #7CFC00; }
+.cell.sticky { animation: stickyPulse 0.8s ease-in-out 2; }
+@keyframes stickyPulse {
+  0%, 100% { background: rgba(245,197,66,0.15); }
+  50% { background: rgba(245,197,66,0.45); }
+}
+.feature-overlay { z-index: 5; }
+.multiplier-popup { z-index: 6; }

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="f" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff7043"/>
+      <stop offset="100%" stop-color="#bf360c"/>
+    </linearGradient>
+  </defs>
+  <rect x="22" y="16" width="8" height="34" rx="2" fill="url(#f)" stroke="#5d1a00" stroke-width="1.5"/>
+  <rect x="34" y="16" width="8" height="34" rx="2" fill="url(#f)" stroke="#5d1a00" stroke-width="1.5"/>
+  <path d="M26 16 L24 8 M38 16 L40 8" stroke="#ffd54f" stroke-width="2"/>
+  <text x="32" y="58" text-anchor="middle" font-size="6" font-weight="700" fill="#ffd54f">FIRE</text>
+</svg>

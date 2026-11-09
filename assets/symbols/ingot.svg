@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe082"/>
+      <stop offset="100%" stop-color="#c9891a"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="24" width="44" height="22" rx="4" fill="url(#gold)" stroke="#7a5200" stroke-width="2"/>
+  <rect x="14" y="18" width="36" height="10" rx="3" fill="#ffd54f" stroke="#7a5200" stroke-width="1.5"/>
+  <text x="32" y="40" text-anchor="middle" font-size="8" font-weight="700" fill="#5a3a00">INGOT</text>
+</svg>
