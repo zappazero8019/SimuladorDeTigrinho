@@ -70,3 +70,32 @@ test('area de mensagens tem espacamento responsivo sem overlay na grade', () => 
   assert.match(css, /\.game-messages\s*\{[^}]*min-height/);
   assert.match(css, /\.game-head\s*\{[^}]*margin-bottom/);
 });
+
+test('nao existe secao view-game solta sem fechamento', () => {
+  // Deve existir exatamente uma <section class="game-panel view view-game">
+  // e uma <section class="info-panel view view-game">, nao uma tag <section class="view view-game"> solta
+  const gamePanelMatches = html.match(/<section class="game-panel view view-game"/g) || [];
+  const infoPanelMatches = html.match(/<section class="info-panel view view-game"/g) || [];
+  const bareViewGameMatches = html.match(/<section class="view view-game"(?!\s+game-panel|\s+info-panel)/g) || [];
+  assert.equal(gamePanelMatches.length, 1, 'deve existir exatamente uma section game-panel view-game');
+  assert.equal(infoPanelMatches.length, 1, 'deve existir exatamente uma section info-panel view-game');
+  assert.equal(bareViewGameMatches.length, 0, 'nao deve existir tag section view-view-game solta (sem fechar)');
+});
+
+test('cada view tem exatamente uma classe de view', () => {
+  const viewSections = html.match(/<section[^>]*class="[^"]*view[^"]*"/g);
+  assert.ok(viewSections, 'deve existir pelo menos uma section com classe view');
+  for (const section of viewSections) {
+    const viewClasses = section.match(/view-\w+/g);
+    assert.ok(viewClasses, 'secao deve ter uma classe view-*');
+    assert.equal(viewClasses.length, 1, 'secao deve ter exatamente uma classe view-*: ' + section);
+  }
+});
+
+test('doSpin usa try/finally para garantir liberacao do botao', () => {
+  const mainJs = readFileSync(join(root, 'js', 'main.js'), 'utf8');
+  // Verifica que doSpin tem try/finally para re-habilitar o botao mesmo em caso de erro
+  assert.match(mainJs, /async function doSpin\(\)/);
+  assert.match(mainJs, /try\s*\{[\s\S]*await performSpin\(bet, false\)/);
+  assert.match(mainJs, /\}\s*finally\s*\{[\s\S]*spinning\s*=\s*false[\s\S]*els\.spinBtn\.disabled\s*=\s*false/);
+});

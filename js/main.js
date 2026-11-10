@@ -8,6 +8,14 @@ import { LabController } from './lab.js';
 import { formatBRL, addCredits, resultCents, resultCentsWithBaseline, resultKind, canPlaceBet, toCents } from './wallet.js';
 import * as charts from './charts.js';
 import { EffectsController, classifyWin } from './effects.js';
+import {
+  EXPERIMENTAL_MULTIPLIERS,
+  EXPERIMENTAL_MULTIPLIER_CONFIG,
+  drawExperimentalMultiplier,
+  applyWinCap,
+  toCents as multToCents,
+  fromCents as multFromCents,
+} from './experimental-multipliers.js';
 
 const ui = new GameUI();
 const effects = new EffectsController();
@@ -47,6 +55,11 @@ state.resultBaseline = {
   bet: Number(state.resultBaseline.bet) || 0,
   win: Number(state.resultBaseline.win) || 0,
 };
+
+// Multiplicador experimental da rodada atual.
+// Sorteado antes de cada giro, aplicado ao prêmio e descartado ao final.
+// Não persiste entre rodadas nem após recarregar a página.
+let currentMultiplier = 1;
 
 let autoRunning = false;
 let autoPaused = false;
@@ -104,6 +117,8 @@ const els = {
   resultLossValue: document.getElementById('resultValueLoss'),
   resultNetValue: document.getElementById('resultValueNet'),
   resultResetBtn: document.getElementById('resultResetBtn'),
+  experimentalMultiplierDisplay: document.getElementById('experimentalMultiplierDisplay'),
+  autoCloseBtn: document.getElementById('autoCloseBtn'),
 };
 
 function persist() {
@@ -183,6 +198,34 @@ async function performSpin(bet, isAuto = false) {
   state.profileId = els.profile.value;
   const config = getProfile(state.profileId);
 
+  // Sorteia multiplicador experimental ANTES do giro, usando RNG independente.
+  // Não utiliza o RNG do motor matemático (createRng) para não alterar a
+  // sequência aleatória original do jogo.
+  const expRng = {
+    random: () => Math.random(),
+    pickWeighted: (values, weights) => {
+      const total = weights.reduce((a, b) => a + b, 0);
+      let threshold = Math.random() * total;
+      for (let i = 0; i < values.length; i++) {
+        threshold -= weights[i];
+        if (threshold <= 0) return values[i];
+      }
+      return values[values.length - 1];
+    },
+  };
+  currentMultiplier = drawExperimentalMultiplier(expRng, EXPERIMENTAL_MULTIPLIER_CONFIG);
+
+  // Exibe o multiplicador acima da roleta (se houver).
+  if (els.experimentalMultiplierDisplay) {
+    if (currentMultiplier > 1) {
+      els.experimentalMultiplierDisplay.textContent = `Multiplicador experimental: ×${currentMultiplier}`;
+      els.experimentalMultiplierDisplay.hidden = false;
+      els.experimentalMultiplierDisplay.className = `experimental-mult mult-${currentMultiplier}`;
+    } else {
+      els.experimentalMultiplierDisplay.hidden = true;
+    }
+  }
+
   if (!isAuto) {
     ui.clearHighlights();
     els.win.textContent = '0';
@@ -195,6 +238,7 @@ async function performSpin(bet, isAuto = false) {
   const spinMs = state.animations ? 1200 : 100;
   await new Promise((res) => setTimeout(res, spinMs));
 
+  // Motor matemático original: RNG próprio, sem interferência dos sorteios experimentais.
   const rng = createRng();
   const result = playSpin({ bet: state.bet, rng, config, balance: state.balance });
 
@@ -217,37 +261,57 @@ async function performSpin(bet, isAuto = false) {
     } else {
       if (state.sound) audio.soundLose();
     }
-    els.win.textContent = format(result.totalWin);
-    setStatus(result.totalWin > 0
-      ? `Prêmio: ${format(result.totalWin)}${result.fullGrid ? ' (×10!)' : ''}`
-      : 'Sem prêmio.');
 
-  state.balance = result.balanceAfter;
+  // === APLICAÇÃO DO MULTIPLICADOR EXPERIMENTAL (em centavos) ===
+  // O prêmio base vem do motor matemático (já inclui ×10 full grid se houver).
+  // O multiplicador experimental se aplica sobre esse prêmio base, uma única vez.
+  const baseWinCents = multToCents(result.totalWin);
+  const multipliedWinCents = baseWinCents * currentMultiplier;
+  const cappedWinCents = applyWinCap(multipliedWinCents, multToCents(bet));
+  const finalWin = multFromCents(cappedWinCents);
+
+  // Saldo final: aposta debitada + prêmio efetivamente creditado (multiplicado).
+  // NÃO usa result.balanceAfter diretamente, pois ele não considera o multiplicador.
+  const balanceAfter = Math.round((state.balance - bet + finalWin) * 100) / 100;
+
+  els.win.textContent = format(finalWin);
+  setStatus(finalWin > 0
+    ? `Prêmio: ${format(finalWin)}${result.fullGrid ? ' (×10!)' : ''}${currentMultiplier > 1 ? ` [×${currentMultiplier} experimental]` : ''}`
+    : 'Sem prêmio.');
+
+  state.balance = balanceAfter;
   const roundRecord = {
     t: Date.now(),
     n: state.history.length + 1,
     bet: state.bet,
-    win: result.totalWin,
-    net: result.totalWin - state.bet,
-    balanceBefore: result.balanceBefore,
-    balanceAfter: result.balanceAfter,
+    win: finalWin,
+    net: finalWin - state.bet,
+    balanceBefore: state.balance,
+    balanceAfter: balanceAfter,
     feature: result.featureTriggered,
     fullGrid: result.fullGrid,
     auto: isAuto,
+    experimentalMultiplier: currentMultiplier > 1 ? currentMultiplier : null,
   };
   state.history.unshift(roundRecord);
   state.transactions.unshift({ t: roundRecord.t, type: 'round', amount: roundRecord.net });
   state.totals.bet = addCredits(state.totals.bet, state.bet);
-  state.totals.win = addCredits(state.totals.win, result.totalWin);
+  state.totals.win = addCredits(state.totals.win, finalWin);
 
   renderState();
   persist();
 
-  if (result.totalWin > 0) {
-    const multiplier = result.totalWin / result.bet;
+  if (finalWin > 0) {
+    const multiplier = finalWin / result.bet;
     const level = classifyWin(multiplier);
     if (state.sound) audio.soundWinLevel(level);
-    await effects.celebrate({ level, multiplier, winAmount: result.totalWin, fullGrid: result.fullGrid });
+    await effects.celebrate({ level, multiplier, winAmount: finalWin, fullGrid: result.fullGrid });
+  }
+
+  // Descarta o multiplicador experimental (consumido na rodada).
+  currentMultiplier = 1;
+  if (els.experimentalMultiplierDisplay) {
+    els.experimentalMultiplierDisplay.hidden = true;
   }
 
   return result;
@@ -261,9 +325,12 @@ async function doSpin() {
 
   spinning = true;
   els.spinBtn.disabled = true;
-  await performSpin(bet, false);
-  spinning = false;
-  els.spinBtn.disabled = false;
+  try {
+    await performSpin(bet, false);
+  } finally {
+    spinning = false;
+    els.spinBtn.disabled = false;
+  }
 }
 
 // events
@@ -381,6 +448,7 @@ els.autoPause.addEventListener('click', () => {
   els.autoPause.textContent = autoPaused ? 'Retomar' : 'Pausar';
 });
 els.autoStop.addEventListener('click', () => { autoStopRequested = true; });
+els.autoCloseBtn.addEventListener('click', () => { els.autoPanel.classList.add('hidden'); });
 els.autoInterval.addEventListener('change', () => {
   els.autoIntervalCustom.hidden = els.autoInterval.value !== 'custom';
 });

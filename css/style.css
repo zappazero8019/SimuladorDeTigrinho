@@ -179,6 +179,27 @@ body {
   text-shadow: 0 0 16px rgba(245,197,66,0.6); display: block;
 }
 
+/* Exibição do multiplicador experimental acima da roleta */
+.experimental-mult-display {
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(245,197,66,0.35);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--gold);
+  pointer-events: none;
+}
+.experimental-mult-display.mult-2 { color: #7CFC00; border-color: rgba(124,252,0,0.5); }
+.experimental-mult-display.mult-5 { color: #ffd700; border-color: rgba(255,215,0,0.5); }
+.experimental-mult-display.mult-10 { color: #ff8c00; border-color: rgba(255,140,0,0.5); }
+.experimental-mult-display.mult-50 { color: #ff1a1a; border-color: rgba(255,26,26,0.5); }
+
+/* Botão Fechar do Auto apostar */
+.btn-small { font-size: 12px; padding: 4px 8px; }
+
 /* Textos de nível (BIG WIN, MEGA WIN) */
 .win-text {
   position: absolute; left: 50%; top: 30%;
