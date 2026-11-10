@@ -132,10 +132,10 @@ fortune-tiger-simulator/
 - Semente fixa apenas em modo de teste/simulaÃ§Ã£o, claramente identificado.
 - CÃ³digo documentado; parÃ¢metros experimentais marcados.
 
-## 9. Laboratório (Fase 4)
+## 9. Laboratï¿½rio (Fase 4)
 
-- js/lab.js: controlador da UI do laboratório.
-- js/lab-worker.js: Web Worker para simulações em segundo plano.
-- js/charts.js: gráficos em Canvas.
-- js/strategies.js: estratégias e simulação de sessões.
-- Persistência de experimentos via LocalStorage.
+- js/lab.js: controlador da UI do laboratï¿½rio.
+- js/lab-worker.js: Web Worker para simulaï¿½ï¿½es em segundo plano.
+- js/charts.js: grï¿½ficos em Canvas.
+- js/strategies.js: estratï¿½gias e simulaï¿½ï¿½o de sessï¿½es.
+- Persistï¿½ncia de experimentos via LocalStorage.

@@ -22,9 +22,9 @@ A estratÃ©gia nÃ£o altera a vantagem matemÃ¡tica por unidade apostada; altera va
 - Pagamentos extremos (atÃ© 2.500Ã—) geram caudas pesadas.
 - Intervalos normais podem ser inadequados para amostras pequenas.
 - Resultados dependem dos pesos experimentais.
-## Correções da Fase 4.1
+## Correï¿½ï¿½es da Fase 4.1
 
-- IC95% utiliza t de Student entre replicações independentes; para 1 replicação é exibido como indisponível.
-- Estratégias comparadas com Common Random Numbers.
-- RTP acumulado utilizado nos gráficos.
+- IC95% utiliza t de Student entre replicaï¿½ï¿½es independentes; para 1 replicaï¿½ï¿½o ï¿½ exibido como indisponï¿½vel.
+- Estratï¿½gias comparadas com Common Random Numbers.
+- RTP acumulado utilizado nos grï¿½ficos.
 - House edge experimental calculado como 100 - RTP estimado.
