@@ -5,7 +5,7 @@ import { loadState, saveState } from './storage.js';
 import { GameUI } from './ui.js';
 import * as audio from './audio.js';
 import { LabController } from './lab.js';
-import { formatBRL, addCredits, resultCents, resultKind, canPlaceBet } from './wallet.js';
+import { formatBRL, addCredits, resultCents, resultCentsWithBaseline, resultKind, canPlaceBet, toCents } from './wallet.js';
 import * as charts from './charts.js';
 import { EffectsController, classifyWin } from './effects.js';
 
@@ -35,6 +35,17 @@ if (!state.totals || typeof state.totals !== 'object') {
 state.totals = {
   bet: Number(state.totals.bet) || 0,
   win: Number(state.totals.win) || 0,
+};
+
+// Linha de base do resultado operacional.
+// Representa os totais no momento do último reset do indicador.
+// O resultado exibido considera apenas movimentos posteriores a esta linha.
+if (!state.resultBaseline || typeof state.resultBaseline !== 'object') {
+  state.resultBaseline = { bet: state.totals.bet, win: state.totals.win };
+}
+state.resultBaseline = {
+  bet: Number(state.resultBaseline.bet) || 0,
+  win: Number(state.resultBaseline.win) || 0,
 };
 
 let autoRunning = false;
@@ -89,6 +100,10 @@ const els = {
   resultBanner: document.getElementById('resultBanner'),
   resultLabel: document.getElementById('resultLabel'),
   resultValue: document.getElementById('resultValue'),
+  resultGainValue: document.getElementById('resultValueGain'),
+  resultLossValue: document.getElementById('resultValueLoss'),
+  resultNetValue: document.getElementById('resultValueNet'),
+  resultResetBtn: document.getElementById('resultResetBtn'),
 };
 
 function persist() {
@@ -102,6 +117,7 @@ function persist() {
     transactions: state.transactions.slice(0, 200),
     sessions: state.sessions.slice(0, 50),
     totals: state.totals,
+    resultBaseline: state.resultBaseline,
   });
 }
 
@@ -122,13 +138,31 @@ function renderState() {
 
 function renderOperationalResult() {
   if (!els.resultBanner) return;
-  const cents = resultCents(state.totals.bet, state.totals.win);
-  const kind = resultKind(cents);
+
+  // Ganho = prêmios recebidos após o baseline
+  const gainCents = resultCentsWithBaseline(
+    0, state.totals.win,
+    0, state.resultBaseline.win
+  );
+  // Perda = apostas realizadas após o baseline (valor positivo)
+  const lossCents = toCents(state.totals.bet) - toCents(state.resultBaseline.bet);
+  // Lucro/Prejuízo = Ganho − Perda
+  const netCents = resultCentsWithBaseline(
+    state.totals.bet, state.totals.win,
+    state.resultBaseline.bet, state.resultBaseline.win
+  );
+
+  const kind = resultKind(netCents);
   els.resultBanner.classList.remove('is-profit', 'is-loss', 'is-even');
   els.resultBanner.classList.add(kind === 'profit' ? 'is-profit' : kind === 'loss' ? 'is-loss' : 'is-even');
-  const abs = formatBRL(Math.abs(cents) / 100);
+
+  const formatAbs = (c) => formatBRL(Math.abs(c) / 100);
+
+  els.resultGainValue.textContent = `+ ${formatAbs(gainCents)}`;
+  els.resultLossValue.textContent = `− ${formatAbs(lossCents)}`;
+
   els.resultLabel.textContent = kind === 'profit' ? 'LUCRO' : kind === 'loss' ? 'PREJUÍZO' : 'EMPATE';
-  els.resultValue.textContent = kind === 'profit' ? `+ ${abs}` : kind === 'loss' ? `- ${abs}` : abs;
+  els.resultNetValue.textContent = kind === 'profit' ? `+ ${formatAbs(netCents)}` : kind === 'loss' ? `- ${formatAbs(netCents)}` : formatAbs(netCents);
 }
 
 function renderHistory() {
@@ -243,7 +277,7 @@ els.settingsToggle.addEventListener('click', () => { els.settingsPanel.hidden = 
 els.closeSettings.addEventListener('click', () => { els.settingsPanel.hidden = true; });
 els.soundCheckbox.addEventListener('change', () => { state.sound = els.soundCheckbox.checked; renderState(); persist(); });
 els.animCheckbox.addEventListener('change', () => { state.animations = els.animCheckbox.checked; persist(); });
-els.resetBalance.addEventListener('click', () => { state.balance = 100.00; state.history = []; state.transactions = []; state.totals = { bet: 0, win: 0 }; renderState(); persist(); setStatus('Saldo reiniciado.'); });
+els.resetBalance.addEventListener('click', () => { state.balance = 100.00; state.history = []; state.transactions = []; state.totals = { bet: 0, win: 0 }; state.resultBaseline = { bet: 0, win: 0 }; renderState(); persist(); setStatus('Saldo reiniciado.'); });
 els.clearHistory.addEventListener('click', () => { state.history = []; renderState(); persist(); });
 els.exportJson.addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state.history, null, 2)], { type: 'application/json' });
@@ -316,6 +350,27 @@ els.zeroBalanceBtn.addEventListener('click', async () => {
   } finally {
     zeroInProgress = false;
     els.zeroBalanceBtn.disabled = false;
+  }
+});
+
+// Zerar resultado operacional acumulado (apenas o indicador, não afeta saldo/histórico/totais)
+let resultResetInProgress = false;
+
+els.resultResetBtn.addEventListener('click', async () => {
+  if (resultResetInProgress) return;
+  if (!confirm('Zerar o resultado operacional acumulado?\n\nEsta ação reinicia a contagem do indicador de lucro/prejuízo a partir deste momento.\n\nSaldo, histórico, estatísticas e totais totais são preservados.')) return;
+
+  resultResetInProgress = true;
+  els.resultResetBtn.disabled = true;
+
+  try {
+    state.resultBaseline = { bet: state.totals.bet, win: state.totals.win };
+    renderState();
+    persist();
+    setStatus('Resultado operacional zerado.');
+  } finally {
+    resultResetInProgress = false;
+    els.resultResetBtn.disabled = false;
   }
 });
 

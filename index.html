@@ -57,6 +57,12 @@
         </div>
         <div class="feature-overlay" id="featureOverlay" hidden aria-hidden="true"></div>
         <div class="multiplier-popup" id="multiplierPopup" hidden>×10</div>
+        <div id="winPopup" class="win-popup" hidden>
+          <div class="win-popup-content">
+            <div class="win-popup-label">Prêmio</div>
+            <div class="win-popup-value">R$ 0,00</div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -78,10 +84,19 @@
 
       <div class="result-banner is-even" id="resultBanner" role="status" aria-live="polite">
         <div class="result-title">Resultado operacional acumulado</div>
-        <div class="result-line">
-          <span class="result-label" id="resultLabel">EMPATE</span>
-          <span class="result-value" id="resultValue">R$ 0,00</span>
+        <div class="result-row result-row-gain">
+          <span class="result-label">Ganho</span>
+          <span class="result-value result-value-gain" id="resultValueGain">+ R$ 0,00</span>
         </div>
+        <div class="result-row result-row-loss">
+          <span class="result-label">Perda</span>
+          <span class="result-value result-value-loss" id="resultValueLoss">− R$ 0,00</span>
+        </div>
+        <div class="result-row result-row-net">
+          <span class="result-label result-label-net" id="resultLabel">EMPATE</span>
+          <span class="result-value result-value-net" id="resultValueNet">R$ 0,00</span>
+        </div>
+        <button id="resultResetBtn" class="btn-small result-reset-btn" title="Zerar resultado operacional">Zerar resultado</button>
       </div>
 
       <div class="wallet-actions">

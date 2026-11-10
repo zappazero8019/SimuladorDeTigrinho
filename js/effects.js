@@ -6,6 +6,13 @@ export const WIN_LEVELS = {
   EPIC: 4,
 };
 
+export const WIN_TIERS = {
+  SMALL:   { min: 0,     max: 1.99, label: 'Pequena',   class: 'level-1' },
+  MEDIUM:  { min: 2,     max: 9.99, label: 'Média',     class: 'level-2' },
+  BIG:     { min: 10,    max: 49.99,label: 'Grande',    class: 'level-3' },
+  EPIC:    { min: 50,    max: Infinity, label: 'Extraordinária', class: 'level-4' },
+};
+
 export function classifyWin(multiplier) {
   const m = Number(multiplier);
   if (!Number.isFinite(m) || m <= 0) return WIN_LEVELS.NONE;
@@ -24,6 +31,7 @@ const LEVEL_DURATION = { 1: 700, 2: 1100, 3: 1600, 4: 2600 };
 export class EffectsController {
   constructor() {
     this.layer = document.getElementById('effectsLayer');
+    this.winPopup = document.getElementById('winPopup');
     this.reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.timeouts = [];
   }
@@ -54,6 +62,9 @@ export class EffectsController {
     this.clear();
     this.layer.classList.add('level-' + level);
 
+    // Exibe o prêmio real no winPopup com contagem animada
+    this.showWinPopup(winAmount);
+
     const duration = LEVEL_DURATION[level] || 800;
     const count = this.reduced ? Math.max(4, Math.floor(6 / level)) : 12 + level * 10;
 
@@ -62,7 +73,7 @@ export class EffectsController {
     glow.className = 'effect-glow level-' + level;
     this.layer.appendChild(glow);
 
-    // particles
+    // partículas (progressivamente mais conforme o nível)
     for (let i = 0; i < count; i++) {
       const p = document.createElement('div');
       p.className = 'particle level-' + level;
@@ -75,43 +86,49 @@ export class EffectsController {
       this.layer.appendChild(p);
     }
 
-    // coins for medium+
+    // moedas (nível 2+)
     if (level >= 2 && !this.reduced) {
-      const coins = level === 4 ? 24 : level === 3 ? 16 : 10;
+      const coins = level === 4 ? 40 : level === 3 ? 24 : level === 2 ? 12 : 0;
       for (let i = 0; i < coins; i++) {
         const c = document.createElement('div');
         c.className = 'coin level-' + level;
         c.textContent = '🪙';
-        c.style.left = (20 + Math.random() * 60) + '%';
-        c.style.animationDelay = (Math.random() * 0.4) + 's';
+        c.style.left = (10 + Math.random() * 80) + '%';
+        c.style.top = (10 + Math.random() * 60) + '%';
+        c.style.animationDelay = (Math.random() * 0.6) + 's';
         this.layer.appendChild(c);
       }
     }
 
-    // fireworks for big+
+    // fogos (nível 3+)
     if (level >= 3 && !this.reduced) {
-      const bursts = level === 4 ? 5 : 3;
+      const bursts = level === 4 ? 8 : level === 3 ? 4 : 0;
       for (let b = 0; b < bursts; b++) {
         this.schedule(() => this.spawnFirework(), b * 300);
       }
     }
 
-    // epic overlay
+    // textos especiais por nível
+    this.addLevelText(level, multiplier, winAmount);
+
+    // epic overlay (nível 4)
     if (level === 4) {
       const overlay = document.createElement('div');
       overlay.className = 'epic-overlay';
-      overlay.innerHTML = `<div class="epic-title">GRANDE VITÓRIA!</div><div class="epic-amount"></div><div class="epic-mult">×${multiplier.toFixed(2)}</div>`;
+      overlay.innerHTML = `<div class="epic-title">MEGA WIN!</div><div class="epic-amount"></div><div class="epic-mult">×${multiplier.toFixed(2)}</div>`;
       const amt = overlay.querySelector('.epic-amount');
       amt.textContent = formatMoney(winAmount);
       this.layer.appendChild(overlay);
     }
 
+    // flash full grid
     if (fullGrid) {
       const mg = document.createElement('div');
       mg.className = 'fullgrid-flash';
       this.layer.appendChild(mg);
     }
 
+    // aguarda duração da comemoração
     await new Promise((res) => {
       const id = setTimeout(() => {
         this.timeouts = this.timeouts.filter((x) => x !== id);
@@ -119,7 +136,59 @@ export class EffectsController {
       }, duration);
       this.timeouts.push(id);
     });
+
+    this.hideWinPopup();
     this.clear();
+  }
+
+  showWinPopup(amount) {
+    if (!this.winPopup) return;
+    const valueEl = this.winPopup.querySelector('.win-popup-value');
+    const labelEl = this.winPopup.querySelector('.win-popup-label');
+    if (valueEl) valueEl.textContent = formatMoney(0);
+    if (labelEl) labelEl.textContent = 'Prêmio';
+    this.winPopup.hidden = false;
+    this.winPopup.classList.remove('animating');
+    void this.winPopup.offsetWidth; // force reflow
+    this.winPopup.classList.add('animating');
+    if (valueEl) {
+      this.animateValue(valueEl, 0, amount, 600);
+    }
+  }
+
+  hideWinPopup() {
+    if (!this.winPopup) return;
+    this.winPopup.classList.remove('animating');
+    this.winPopup.hidden = true;
+  }
+
+  animateValue(el, from, to, duration) {
+    const start = performance.now();
+    const step = (now) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const current = from + (to - from) * progress;
+      el.textContent = formatMoney(current);
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    };
+    requestAnimationFrame(step);
+  }
+
+  addLevelText(level, multiplier, winAmount) {
+    const textMap = {
+      [WIN_LEVELS.SMALL]: 'Vitória',
+      [WIN_LEVELS.MEDIUM]: 'Vitória',
+      [WIN_LEVELS.BIG]: 'BIG WIN',
+      [WIN_LEVELS.EPIC]: 'MEGA WIN',
+    };
+    const text = textMap[level];
+    if (!text) return;
+
+    const el = document.createElement('div');
+    el.className = 'win-text level-' + level;
+    el.textContent = text + '  ×' + multiplier.toFixed(2);
+    this.layer.appendChild(el);
   }
 
   spawnFirework() {
@@ -139,7 +208,7 @@ export class EffectsController {
       fw.appendChild(s);
     }
     this.layer.appendChild(fw);
-    this.schedule(() => { if (fw.parentNode) fw.remove(); }, 900);
+    this.schedule(() => { if (fw.parentNode) fw.remove(); }, 1200);
   }
 }
 

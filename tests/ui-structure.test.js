@@ -42,7 +42,9 @@ test('grade nao contem textos de titulo ou frases', () => {
 test('contador operacional visivel e identificado', () => {
   assert.ok(indexOfOrFail('id="resultBanner"') > -1);
   assert.ok(indexOfOrFail('id="resultLabel"') > -1);
-  assert.ok(indexOfOrFail('id="resultValue"') > -1);
+  assert.ok(indexOfOrFail('id="resultValueNet"') > -1);
+  assert.ok(indexOfOrFail('id="resultValueGain"') > -1);
+  assert.ok(indexOfOrFail('id="resultValueLoss"') > -1);
   assert.match(html, /Resultado operacional acumulado/);
 });
 

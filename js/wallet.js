@@ -40,3 +40,14 @@ export function canPlaceBet(balance, bet) {
   if (!Number.isFinite(b) || b <= 0) return false;
   return toCents(b) <= toCents(balance);
 }
+
+/**
+ * Resultado operacional considerando uma linha de base (baseline).
+ * Retorna apenas as movimentações posteriores ao último reset.
+ * Não afeta totais históricos; afeta apenas a apresentação do indicador.
+ */
+export function resultCentsWithBaseline(totalBet, totalWin, baselineBet, baselineWin) {
+  const current = resultCents(totalBet, totalWin);
+  const base = resultCents(baselineBet, baselineWin);
+  return current - base;
+}
