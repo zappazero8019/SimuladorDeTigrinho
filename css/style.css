@@ -420,6 +420,58 @@ body {
   padding: 6px;
 }
 
+/* Responsividade para telas maiores (desktop) */
+@media (min-width: 768px) {
+  .app {
+    max-width: 640px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app {
+    max-width: 800px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .app {
+    max-width: 960px;
+  }
+}
+
+/* Ajuste da grade para telas maiores */
+@media (min-width: 768px) {
+  .reel {
+    min-height: 220px;
+  }
+  .cell {
+    font-size: 42px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .reel {
+    min-height: 260px;
+  }
+  .cell {
+    font-size: 48px;
+  }
+}
+
+/* Ajuste do histórico para desktop */
+@media (min-width: 768px) {
+  .history-list {
+    max-height: 240px;
+  }
+}
+
+/* Ajuste dos laboratórios/estatísticas para desktop */
+@media (min-width: 768px) {
+  .lab-charts {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @keyframes winPulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.08); }
@@ -463,4 +515,4 @@ body {
 .epic-amount { font-size: 22px; color: #fff; margin-top: 6px; }
 .epic-mult { font-size: 32px; font-weight: 900; color: #fff; margin-top: 4px; text-shadow: 0 0 8px #ffd700; }
 @keyframes epicIn { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
-@media (prefers-reduced-motion: reduce) { .particle, .coin, .spark, .firework, .feature-overlay, .win-text, .win-popup, .win-popup-content { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .particle, .coin, .spark, .firework, .feature-overlay, .win-text, .win-popup, .win-popup-content, .reel.spinning .cell, .cell.win-cell { animation: none !important; } }

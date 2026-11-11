@@ -16,6 +16,7 @@ import {
   toCents as multToCents,
   fromCents as multFromCents,
 } from './experimental-multipliers.js';
+import { canSettleRoundWin, settleRoundWin } from './round-settlement.js';
 
 const ui = new GameUI();
 const effects = new EffectsController();
@@ -68,6 +69,7 @@ let currentView = 'game';
 
 let spinning = false;
 let zeroInProgress = false;
+let roundInProgress = false;
 
 const els = {
   balance: document.getElementById('balanceValue'),
@@ -193,7 +195,10 @@ function renderHistory() {
 function setStatus(msg) { els.status.textContent = msg; }
 
 async function performSpin(bet, isAuto = false) {
-  effects.clear();
+  if (roundInProgress) return;
+  roundInProgress = true;
+  try {
+    effects.clear();
   state.bet = bet;
   state.profileId = els.profile.value;
   const config = getProfile(state.profileId);
@@ -226,11 +231,11 @@ async function performSpin(bet, isAuto = false) {
     }
   }
 
-  if (!isAuto) {
-    ui.clearHighlights();
-    els.win.textContent = '0';
-    setStatus('Girando...');
-  }
+  // Limpa destaques e overlays da rodada anterior antes de cada giro,
+  // independentemente de ser manual ou automático.
+  ui.clearHighlights();
+  els.win.textContent = '0';
+  setStatus('Girando...');
 
   if (state.animations) ui.setSpinning(true);
   if (state.sound) audio.soundSpin();
@@ -240,9 +245,14 @@ async function performSpin(bet, isAuto = false) {
 
   // Motor matemático original: RNG próprio, sem interferência dos sorteios experimentais.
   const rng = createRng();
-  const result = playSpin({ bet: state.bet, rng, config, balance: state.balance });
-
-  if (state.animations && !isAuto) ui.setSpinning(false);
+  let result;
+  try {
+    result = playSpin({ bet: state.bet, rng, config, balance: state.balance });
+  } finally {
+    // Encerra a animação de giro e limpa o intervalo de 80 ms em ambos os modos
+    // (manual e automático), mesmo em caso de erro.
+    if (state.animations) ui.setSpinning(false);
+  }
   ui.renderGrid(result.grid);
 
   if (result.featureTriggered) {
@@ -266,9 +276,23 @@ async function performSpin(bet, isAuto = false) {
   // O prêmio base vem do motor matemático (já inclui ×10 full grid se houver).
   // O multiplicador experimental se aplica sobre esse prêmio base, uma única vez.
   const baseWinCents = multToCents(result.totalWin);
-  const multipliedWinCents = baseWinCents * currentMultiplier;
-  const cappedWinCents = applyWinCap(multipliedWinCents, multToCents(bet));
+  const betCents = multToCents(bet);
+  const settlementOptions = {
+    baseWinCents,
+    betCents,
+    multiplier: currentMultiplier,
+    applyExperimentalCap: true,
+  };
+
+  // Fora do domínio estrito, mantém exatamente a fórmula legada. Isso preserva
+  // apostas sub-centavo e valores fora da faixa segura, sem lançar exceção.
+  const cappedWinCents = canSettleRoundWin(settlementOptions)
+    ? settleRoundWin(settlementOptions).finalCents
+    : applyWinCap(baseWinCents * currentMultiplier, betCents);
   const finalWin = multFromCents(cappedWinCents);
+
+  // Saldo antes da rodada: capturado antes da atualização para o histórico/exportação.
+  const balanceBefore = state.balance;
 
   // Saldo final: aposta debitada + prêmio efetivamente creditado (multiplicado).
   // NÃO usa result.balanceAfter diretamente, pois ele não considera o multiplicador.
@@ -286,7 +310,7 @@ async function performSpin(bet, isAuto = false) {
     bet: state.bet,
     win: finalWin,
     net: finalWin - state.bet,
-    balanceBefore: state.balance,
+    balanceBefore,
     balanceAfter: balanceAfter,
     feature: result.featureTriggered,
     fullGrid: result.fullGrid,
@@ -315,6 +339,9 @@ async function performSpin(bet, isAuto = false) {
   }
 
   return result;
+  } finally {
+    roundInProgress = false;
+  }
 }
 
 async function doSpin() {
@@ -453,7 +480,7 @@ els.autoInterval.addEventListener('change', () => {
   els.autoIntervalCustom.hidden = els.autoInterval.value !== 'custom';
 });
 els.autoStart.addEventListener('click', async () => {
-  if (autoRunning || zeroInProgress) return;
+  if (autoRunning || spinning || zeroInProgress) return;
   const spins = Number(els.autoSpins.value) || 100;
   const bet = Number(els.autoBet.value) || 1;
   const intervalSel = els.autoInterval.value;
@@ -469,21 +496,24 @@ els.autoStart.addEventListener('click', async () => {
   els.autoStatus.textContent = 'Executando...';
   const initialBalance = state.balance;
   let count = 0;
-  while (count < spins && !autoStopRequested) {
-    if (currentView !== 'game') { autoPaused = true; els.autoStatus.textContent = 'Pausado (fora da tela do jogo).'; }
-    if (autoPaused) { await new Promise((r) => setTimeout(r, 300)); continue; }
-    if (state.balance < bet) { els.autoStatus.textContent = 'Saldo insuficiente.'; break; }
-    if (stopProfit !== null && state.balance - initialBalance >= stopProfit) { els.autoStatus.textContent = 'Stop profit atingido.'; break; }
-    if (stopLoss !== null && initialBalance - state.balance >= stopLoss) { els.autoStatus.textContent = 'Stop loss atingido.'; break; }
-    await performSpin(bet, true);
-    count++;
-    els.autoStatus.textContent = `Giro ${count}/${spins}`;
-    await new Promise((r) => setTimeout(r, interval));
+  try {
+    while (count < spins && !autoStopRequested) {
+      if (currentView !== 'game') { autoPaused = true; els.autoStatus.textContent = 'Pausado (fora da tela do jogo).'; }
+      if (autoPaused) { await new Promise((r) => setTimeout(r, 300)); continue; }
+      if (state.balance < bet) { els.autoStatus.textContent = 'Saldo insuficiente.'; break; }
+      if (stopProfit !== null && state.balance - initialBalance >= stopProfit) { els.autoStatus.textContent = 'Stop profit atingido.'; break; }
+      if (stopLoss !== null && initialBalance - state.balance >= stopLoss) { els.autoStatus.textContent = 'Stop loss atingido.'; break; }
+      await performSpin(bet, true);
+      count++;
+      els.autoStatus.textContent = `Giro ${count}/${spins}`;
+      await new Promise((r) => setTimeout(r, interval));
+    }
+    if (autoStopRequested) els.autoStatus.textContent = 'Interrompido.';
+    else if (count >= spins) els.autoStatus.textContent = 'Concluído.';
+  } finally {
+    autoRunning = false;
+    els.spinBtn.disabled = false;
   }
-  if (autoStopRequested) els.autoStatus.textContent = 'Interrompido.';
-  else if (count >= spins) els.autoStatus.textContent = 'Concluído.';
-  autoRunning = false;
-  els.spinBtn.disabled = false;
 });
 
 // Stats
